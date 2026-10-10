@@ -1,0 +1,137 @@
+WITH daily_aggregated AS (
+  -- Aggregate raw data to daily granularity per creative
+  SELECT
+    date,
+    platform,
+    campaign_name,
+    creative_name,
+    SUM(impressions) AS total_impressions,
+    SUM(clicks) AS total_clicks,
+    SUM(cost) AS total_cost
+  FROM `mrdipeshashah.lookerstudiodashboards.raw_ad_metrics`
+  WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY)
+  GROUP BY 1, 2, 3, 4
+),
+
+daily_calculated AS (
+  -- Compute daily CTR and CPC cleanly, avoiding zero division
+  SELECT
+    date,
+    platform,
+    campaign_name,
+    creative_name,
+    total_impressions,
+    total_clicks,
+    total_cost,
+    SAFE_DIVIDE(total_clicks, total_impressions) AS daily_ctr,
+    SAFE_DIVIDE(total_cost, total_clicks) AS daily_cpc
+  FROM daily_aggregated
+),
+
+rolling_metrics AS (
+  -- Calculate 3-day moving averages (Step 2 of workflow)
+  SELECT
+    date,
+    platform,
+    campaign_name,
+    creative_name,
+    total_impressions,
+    total_clicks,
+    total_cost,
+    daily_ctr,
+    daily_cpc,
+    SAFE_DIVIDE(
+      SUM(total_clicks) OVER (
+        PARTITION BY platform, campaign_name, creative_name 
+        ORDER BY date 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+      ),
+      SUM(total_impressions) OVER (
+        PARTITION BY platform, campaign_name, creative_name 
+        ORDER BY date 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+      )
+    ) AS ctr_3day_avg,
+    SAFE_DIVIDE(
+      SUM(total_cost) OVER (
+        PARTITION BY platform, campaign_name, creative_name 
+        ORDER BY date 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+      ),
+      SUM(total_clicks) OVER (
+        PARTITION BY platform, campaign_name, creative_name 
+        ORDER BY date 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+      )
+    ) AS cpc_3day_avg
+  FROM daily_calculated
+),
+
+period_comparison AS (
+  -- Compare Last 7 Days (L7D) vs Prior 7 Days (P7D)
+  SELECT
+    platform,
+    campaign_name,
+    creative_name,
+    -- Last 7 days metrics
+    SAFE_DIVIDE(
+      SUM(CASE WHEN date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) THEN total_clicks END),
+      SUM(CASE WHEN date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) THEN total_impressions END)
+    ) AS ctr_l7d,
+    SAFE_DIVIDE(
+      SUM(CASE WHEN date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) THEN total_cost END),
+      SUM(CASE WHEN date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) THEN total_clicks END)
+    ) AS cpc_l7d,
+    -- Prior 7 days metrics (Day -14 to Day -8)
+    SAFE_DIVIDE(
+      SUM(CASE WHEN date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY) THEN total_clicks END),
+      SUM(CASE WHEN date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY) THEN total_impressions END)
+    ) AS ctr_p7d,
+    SAFE_DIVIDE(
+      SUM(CASE WHEN date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY) THEN total_cost END),
+      SUM(CASE WHEN date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY) THEN total_clicks END)
+    ) AS cpc_p7d
+  FROM daily_aggregated
+  GROUP BY 1, 2, 3
+)
+
+SELECT
+  r.date,
+  r.platform,
+  r.campaign_name,
+  r.creative_name,
+  r.total_impressions AS impressions,
+  r.total_clicks AS clicks,
+  r.total_cost AS cost,
+  r.daily_ctr,
+  r.daily_cpc,
+  r.ctr_3day_avg,
+  r.cpc_3day_avg,
+  
+  -- Period-over-period % change calculations
+  SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) AS ctr_7d_change_pct,
+  SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) AS cpc_7d_change_pct,
+
+  -- Diagnostic Engine
+  CASE 
+    WHEN SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.10 
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
+    THEN 'Fatigue: Refresh Creative'
+    
+    WHEN ABS(SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d)) < 0.10 
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
+    THEN 'Crowded Auction: Check CPM/Insights'
+    
+    WHEN SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.10 
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) <= -0.10 
+    THEN 'Low Demand: Scale Spend Down'
+    
+    WHEN SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) >= 0.10 
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
+    THEN 'High Demand: Leave Active'
+
+    ELSE 'Healthy / Keep Running'
+  END AS automated_status
+
+FROM rolling_metrics r
+JOIN period_comparison p USING (platform, campaign_name, creative_name);
