@@ -6,9 +6,29 @@ An end-to-end data pipeline, BigQuery diagnostic SQL view, and multi-page Looker
 
 ## 📌 Problem & Business Value
 
-Digital marketing campaigns naturally experience creative fatigue when target audiences are exposed to the same ad creative too many times. Continuing to run fatigued creatives results in wasted ad spend, declining Click-Through Rates (CTR), escalating Costs Per Click (CPC), and algorithmic relevance penalties from platform auction engines.
+### The Mechanics of Creative Fatigue
+Digital marketing campaigns on performance platforms like Meta Ads and Google Ads inevitably suffer from ad creative fatigue. As an audience is exposed to the same visual hook or message repeatedly:
+1. **Audience Saturation & CTR Decay:** Viewer responsiveness drops, causing the Click-Through Rate (CTR) to decline over time.
+2. **Algorithmic Penalties & Auction Pressure:** Modern ad platform auction engines rely on ad relevance scores. As engagement (CTR) drops, algorithms penalize the creative by increasing Cost Per Mille (CPM) to maintain platform yield.
+3. **Compounded Cost Spikes (CPC):** The combination of falling CTR and rising CPM creates an exponential spike in Cost Per Click (CPC) (CPC ≈ CPM / (CTR * 10)), resulting in wasted ad spend and diminished ROAS.
 
-This repository automates the identification of creative fatigue by processing raw daily top-of-funnel ad performance metrics (`impressions`, `clicks`, `cost`) into a BigQuery analytics view (`adplatform_creative_performance`) and a two-page Looker Studio dashboard. The system translates complex period-over-period decay trajectories into an actionable daily task list for media buyers.
+### Solving the Baseline vs. Decay Dilemma
+A common challenge in performance marketing is distinguishing between a **weak initial ad** (e.g., an ad launching with a low baseline CTR of 0.50% that remains flat) and **true creative fatigue** (an ad whose CTR actively decays relative to its prior performance). 
+
+Evaluating raw CTR alone is misleading:
+* **CTR is the Cause (Audience Perception):** Indicates whether the visual/hook is losing resonance over time.
+* **CPC is the Effect (Financial Efficiency):** Measures the financial impact of changing auction costs and engagement rates.
+
+By pairing rolling 3-day moving averages with period-over-period (Last 7 Days vs. Prior 7 Days) relative percentage changes, this pipeline evaluates **rate of decay** rather than static global benchmarks. An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (since performance is stable), while an ad dropping from 2.5% to 1.2% with a rising CPC is flagged as `Fatigue: Refresh Creative`.
+
+---
+
+## ⏱️ Smoothing vs. Trend Windows: 3-Day Moving Averages vs. 7-Day Period-over-Period
+
+A core engineering decision in this pipeline is the combination of **3-day moving averages** and **7-day period-over-period (L7D vs. P7D)** comparisons. Each window serves a distinct analytical purpose, and using them together eliminates false positives caused by day-of-week seasonality or single-day delivery glitches.
+
+**Data Processing Flow:**
+`Raw Daily Data (High Volatility)` ➔ `3-Day Moving Average (Noise Filtering)` ➔ `7-Day Comparison (Directional Trajectory)`
 
 ---
 
