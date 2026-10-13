@@ -2,7 +2,19 @@
 
 An end-to-end data pipeline, BigQuery diagnostic SQL view, and multi-page Looker Studio decision system designed to identify and remediate ad creative fatigue across Meta Ads and Google Ads before campaign performance degrades.
 
----
+## 🗄️ Raw Input Data Schema
+
+To feed the BigQuery diagnostic view (`adplatform_creative_performance`), the raw underlying table (`raw_ad_metrics`) uses the following top-of-funnel schema:
+
+| Field Name | Data Type | Mode | Description | Example Value |
+| :--- | :--- | :--- | :--- | :--- |
+| **date** | `DATE` | `NULLABLE` | Performance record date (`YYYY-MM-DD`). | `2026-10-12` |
+| **platform** | `STRING` | `NULLABLE` | Ad platform identifier (`meta`, `google`). | `meta` |
+| **campaign_name** | `STRING` | `NULLABLE` | Campaign name string. | `Prospecting_Conversions_UK` |
+| **creative_name** | `STRING` | `NULLABLE` | Human-readable creative name or concept code. | `Static_Hook01_AngleA` |
+| **impressions** | `INTEGER` | `NULLABLE` | Total daily ad impressions delivered. | `14500` |
+| **clicks** | `INTEGER` | `NULLABLE` | Total daily link clicks generated. | `185` |
+| **cost** | `FLOAT` | `NULLABLE` | Total daily ad spend (account currency). | `124.50` |
 
 ## 📌 Problem & Business Value
 
