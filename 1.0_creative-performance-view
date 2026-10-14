@@ -1,16 +1,33 @@
 WITH daily_aggregated AS (
-  -- Aggregate raw data to daily granularity per creative
+  -- Aggregate raw data to daily granularity per creative and extract format
   SELECT
     date,
     platform,
     campaign_name,
     creative_name,
+    -- Dynamic Creative Format Classification
+    CASE 
+      WHEN LOWER(SPLIT(creative_name, '_')[SAFE_OFFSET(1)]) IN ('vid', 'video') THEN 'VIDEO'
+      WHEN LOWER(SPLIT(creative_name, '_')[SAFE_OFFSET(1)]) IN ('img', 'stat', 'static') THEN 'STATIC'
+      WHEN LOWER(SPLIT(creative_name, '_')[SAFE_OFFSET(1)]) IN ('car', 'carousel') THEN 'CAROUSEL'
+      WHEN LOWER(SPLIT(creative_name, '_')[SAFE_OFFSET(1)]) IN ('txt', 'text') THEN 'TEXT'
+      WHEN LOWER(SPLIT(creative_name, '_')[SAFE_OFFSET(1)]) IN ('pmax') THEN 'MULTI_ASSET'
+      
+      -- Substring fallback if prefixing varies
+      WHEN LOWER(creative_name) LIKE '%_vid_%' THEN 'VIDEO'
+      WHEN LOWER(creative_name) LIKE '%_img_%' OR LOWER(creative_name) LIKE '%_stat_%' THEN 'STATIC'
+      WHEN LOWER(creative_name) LIKE '%_car_%' THEN 'CAROUSEL'
+      WHEN LOWER(creative_name) LIKE '%_txt_%' THEN 'TEXT'
+      WHEN LOWER(creative_name) LIKE '%_pmax_%' THEN 'MULTI_ASSET'
+      
+      ELSE 'OTHER'
+    END AS creative_format,
     SUM(impressions) AS total_impressions,
     SUM(clicks) AS total_clicks,
     SUM(cost) AS total_cost
   FROM `mrdipeshashah.lookerstudiodashboards.raw_ad_metrics`
   WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY)
-  GROUP BY 1, 2, 3, 4
+  GROUP BY 1, 2, 3, 4, 5
 ),
 
 daily_calculated AS (
@@ -20,6 +37,7 @@ daily_calculated AS (
     platform,
     campaign_name,
     creative_name,
+    creative_format,
     total_impressions,
     total_clicks,
     total_cost,
@@ -29,12 +47,13 @@ daily_calculated AS (
 ),
 
 rolling_metrics AS (
-  -- Calculate 3-day moving averages (Step 2 of workflow)
+  -- Calculate 3-day moving averages
   SELECT
     date,
     platform,
     campaign_name,
     creative_name,
+    creative_format,
     total_impressions,
     total_clicks,
     total_cost,
@@ -73,6 +92,7 @@ period_comparison AS (
     platform,
     campaign_name,
     creative_name,
+    creative_format,
     -- Last 7 days metrics
     SAFE_DIVIDE(
       SUM(CASE WHEN date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) THEN total_clicks END),
@@ -92,7 +112,7 @@ period_comparison AS (
       SUM(CASE WHEN date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY) THEN total_clicks END)
     ) AS cpc_p7d
   FROM daily_aggregated
-  GROUP BY 1, 2, 3
+  GROUP BY 1, 2, 3, 4
 )
 
 SELECT
@@ -100,6 +120,7 @@ SELECT
   r.platform,
   r.campaign_name,
   r.creative_name,
+  r.creative_format,
   r.total_impressions AS impressions,
   r.total_clicks AS clicks,
   r.total_cost AS cost,
@@ -134,4 +155,4 @@ SELECT
   END AS automated_status
 
 FROM rolling_metrics r
-JOIN period_comparison p USING (platform, campaign_name, creative_name);
+JOIN period_comparison p USING (platform, campaign_name, creative_name, creative_format);
