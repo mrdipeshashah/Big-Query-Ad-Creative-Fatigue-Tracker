@@ -6,6 +6,22 @@ This repository contains Big Query code designed to identify and remediate ad cr
 
 The data studio dashboard (https://datastudio.google.com/reporting/0783b9bf-5507-470e-a847-aeabfbf4b560) brings many of the insights to life.
 
+## DIAGNOSTIC MODEL EVOLUTION
+
+This repository provides two alternative SQL view architectures to suit different media buying workflows and governance standards:
+
+1. **Format-Tiered Model (`1.0_creative-performance-format-tiered-model.sql`):** The primary production engine. Dynamically classifies creative formats from naming conventions and applies format-aware sensitivity thresholds to eliminate false-positive fatigue alerts across video and search formats.
+2. **Generic Model (`2.0_creative-performance-generic-model.sql`):** The baseline architecture. Operates on a single cross-format relative threshold ($\pm 10\%$), ideal for accounts without structured creative naming conventions.
+
+### Architectural Comparison Matrix
+
+| Evaluation Dimension | Generic Model (`2.0`) | Format-Tiered Model (`1.0`) |
+| :--- | :--- | :--- |
+| **Format Tagging** | Raw string parsing | Dynamic `creative_format` classification (`VIDEO`, `STATIC`, `CAROUSEL`, `TEXT`, `MULTI_ASSET`) |
+| **Video Sensitivity** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -15\%$ CTR Drop / $\ge +10\%$ CPC *(Noise Tolerant)*[cite: 1] |
+| **Static / Carousel** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC *(Direct Response)*[cite: 1] |
+| **Text / Multi-Asset** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -5\%$ CTR Drop / $\ge +15\%$ CPC *(Auction Pressure Focus)* |
+| **Primary Use Case** | Unstructured creative naming | Standardized naming taxonomies (`meta_vid_...`, `goog_txt_...`) |
 
 ## SCHEMA 
 
@@ -57,17 +73,19 @@ A core engineering decision in this pipeline is the combination of **3-day movin
 
 ---
 
-## DIANOSTIC MATRIX FRAMEWORK
+## FORMAT DIANOSTIC MATRIX FRAMEWORK
 
-The diagnostic engine evaluates campaign metrics by tracking daily trends smoothed with a 3-day moving average and comparing performance over the **Last 7 Days (L7D)** relative to the **Prior 7 Days (P7D)**. Because it evaluates relative percentage changes rather than absolute values, this single diagnostic framework accurately evaluates all ad formats (`VIDEO`, `STATIC`, `CAROUSEL`, `TEXT`, `MULTI_ASSET`) without requiring separate status rules:
+The diagnostic engine evaluates campaign metrics by tracking daily trends smoothed with a 3-day moving average and comparing performance over the **Last 7 Days (L7D)** relative to the **Prior 7 Days (P7D)**. To prevent false positives across varied ad types, the engine applies format-aware sensitivity thresholds across each format category (`VIDEO`, `STATIC`, `CAROUSEL`, `TEXT`, `MULTI_ASSET`):
 
-| CTR Trend (L7D vs P7D) | CPC Trend (L7D vs P7D) | Diagnosis | Automated Status | Action Required |
-| :---: | :---: | :--- | :--- | :--- |
-| **Down** ($\le -10\%$) | **Up** ($\ge +10\%$) | **Creative Fatigue** | `Fatigue: Refresh Creative` | Swap hook/visual for same audience. Do **NOT** rebuild campaign. |
-| **Flat** ($-10\%$ to $+10\%$) | **Up** ($\ge +10\%$) | **Crowded Auction** | `Crowded Auction: Check CPM/Insights` | Auction pressure. Meta: check CPM. Google: check Auction Insights. |
-| **Down** ($\le -10\%$) | **Down** ($\le -10\%$) | **Low Demand** | `Low Demand: Scale Spend Down` | Broad market decline. Scale spend back until demand returns. |
-| **Up** ($\ge +10\%$) | **Up** ($\ge +10\%$) | **High Demand / Winning Ad** | `High Demand: Leave Active` | Ad is winning in competitive auction. Keep active. |
-| Variance within $\pm 10\%$ | Variance within $\pm 10\%$ | **Baseline / Normal** | `Healthy / Keep Running` | Standard fluctuations. No action required. |
+| Creative Format | CTR Decay Rule (L7D vs P7D) | CPC Spike Rule (L7D vs P7D) | Automated Status Trigger | Action Required |
+| :--- | :---: | :---: | :--- | :--- |
+| **`VIDEO`** | **$\le -15\%$** *(higher noise tolerance)* | **$\ge +10\%$** | `Fatigue: Refresh Creative` | Swap video hook / first 3s visual. |
+| **`STATIC` / `CAROUSEL`** | **$\le -10\%$** *(standard direct response)* | **$\ge +10\%$** | `Fatigue: Refresh Creative` | Refresh static visual / banner copy. |
+| **`TEXT` / `MULTI_ASSET`** | **$\le -5\%$** | **$\ge +15\%$** *(auction cost focus)* | `Fatigue: Refresh Creative` | Refresh headline angles & asset groups. |
+| **All Formats** | Flat ($\pm 10\%$) | **$\ge +10\%$** | `Crowded Auction: Check CPM/Insights` | Auction pressure. Check CPMs or Auction Insights. |
+| **All Formats** | **$\le -10\%$** | **$\le -10\%$** | `Low Demand: Scale Spend Down` | Market contraction. Scale back budget. |
+| **All Formats** | **$\ge +10\%$** | **$\ge +10\%$** | `High Demand: Leave Active` | Winning creative in active auction. Keep running. |
+| **All Formats** | Within $\pm 10\%$ | Within $\pm 10\%$ | `Healthy / Keep Running` | Baseline performance. No action required. |
 
 ## 📊 Dashboard Architecture & Performance Measurement
 
