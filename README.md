@@ -122,38 +122,8 @@ Page 2 provides forensic diagnostic depth to separate true creative fatigue from
 * **Algorithmic Penalty vs. Competition (CPM vs. CPC Trend):** Tracks weighted CPM ($\frac{\text{cost}}{\text{impressions}} \times 1000$) alongside CPC trends to determine if cost spikes stem from platform relevance score penalties (CPM surge + CTR drop) or broader competitive bidding wars.
 * **Forensic Breakdown Table:** Displays raw daily figures with heatmaps across spend, impressions, clicks, aggregate CPM, CPC, and CTR.
 
----
 
-## 🏗️ Data Architecture & Pipeline
-
-```text
-┌──────────────────────────────┐
-│  Ad Platforms (Meta/Google)  │
-└──────────────┬───────────────┘
-               │ Daily Ingestion (API / Fivetran)
-               ▼
-┌──────────────────────────────┐
-│  BigQuery: Raw Table         │  raw_ad_metrics
-│  (date, impressions, clicks) │  (Additive top-of-funnel base metrics)
-└──────────────┬───────────────┘
-               │ CTE Window Functions & POP Logic
-               ▼
-┌──────────────────────────────┐
-│  BigQuery: Analytics View    │  adplatform_creative_performance
-│  (3-day averages & Status)   │  (Diagnostic engine layer)
-└──────────────┬───────────────┘
-               │ Direct Query / Live Connection
-               ▼
-┌──────────────────────────────┐
-│  Looker Studio Dashboard     │  Multi-Page Decision System
-│  (Page 1: Alert & Action)    │  (Page 1: Action Table, Trajectory, Scatter Plot)
-│  (Page 2: Volume & Auction)  │  (Page 2: Combo Chart, CPM/CPC Trend, Heatmap Table)
-└──────────────┬───────────────┘
-```
-
----
-
-## 📐 Looker Studio Calculated Fields
+## CALCULATED FIELDS 
 
 To ensure mathematical accuracy across aggregated selections and prevent "average of averages" skewing, the dashboard uses the following custom calculated fields:
 
@@ -164,8 +134,4 @@ To ensure mathematical accuracy across aggregated selections and prevent "averag
 | **Aggregate CPC** | `SUM(cost) / SUM(clicks)` | Currency (`£`) | Calculates true blended cost-per-click for aggregated views. |
 | **Low Volume Flag** | `CASE WHEN SUM(impressions) < 1000 THEN "Low Volume (<1k Imps)" ELSE "Sufficient Volume" END` | Text | Identifies low-volume statistical noise versus true fatigue. |
 
----
 
-## 💻 SQL Source Code
-
-The primary BigQuery SQL view definition is maintained in [`adplatform_creative_performance.sql`](./adplatform_creative_performance.sql). It dynamically calculates rolling 3-day window metrics, L7D vs. P7D period comparisons, and automated status tags directly at the query layer.
