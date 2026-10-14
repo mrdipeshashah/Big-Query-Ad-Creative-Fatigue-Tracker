@@ -2,6 +2,11 @@
 
 This repository contains Big Query code designed to identify and remediate ad creative fatigue across Ad Platform (i.e. Meta Ads and Google Ads) as the first step of a diagnostic framework to spot and remediate ad creative fatigue. 
 
+# DASHBOARD
+
+The data studio dashboard (https://datastudio.google.com/reporting/0783b9bf-5507-470e-a847-aeabfbf4b560) brings many of the insights to life.
+
+
 ## SCHEMA 
 
 The required schema to understand ad creative fatigue 
