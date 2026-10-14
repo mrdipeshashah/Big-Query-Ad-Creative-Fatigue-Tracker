@@ -133,12 +133,35 @@ SELECT
   SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) AS ctr_7d_change_pct,
   SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) AS cpc_7d_change_pct,
 
-  -- Diagnostic Engine
+  -- Format-Specific Diagnostic Engine
   CASE 
-    WHEN SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.10 
+    ------------------------------------------------------------------
+    -- 1. VIDEO: High noise tolerance on link CTR drops (requires >=15% drop)
+    ------------------------------------------------------------------
+    WHEN r.creative_format = 'VIDEO'
+     AND SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.15 
      AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
     THEN 'Fatigue: Refresh Creative'
-    
+
+    ------------------------------------------------------------------
+    -- 2. STATIC & CAROUSEL: High direct response expectations (10% drop)
+    ------------------------------------------------------------------
+    WHEN r.creative_format IN ('STATIC', 'CAROUSEL')
+     AND SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.10 
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
+    THEN 'Fatigue: Refresh Creative'
+
+    ------------------------------------------------------------------
+    -- 3. TEXT & MULTI_ASSET (PMAX): Driven by auction cost explosion (>=15% CPC)
+    ------------------------------------------------------------------
+    WHEN r.creative_format IN ('TEXT', 'MULTI_ASSET')
+     AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.15 
+     AND SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d) <= -0.05
+    THEN 'Fatigue: Refresh Creative'
+
+    ------------------------------------------------------------------
+    -- 4. GENERAL DIAGNOSTIC STATES (Cross-Format)
+    ------------------------------------------------------------------
     WHEN ABS(SAFE_DIVIDE(p.ctr_l7d - p.ctr_p7d, p.ctr_p7d)) < 0.10 
      AND SAFE_DIVIDE(p.cpc_l7d - p.cpc_p7d, p.cpc_p7d) >= 0.10 
     THEN 'Crowded Auction: Check CPM/Insights'
