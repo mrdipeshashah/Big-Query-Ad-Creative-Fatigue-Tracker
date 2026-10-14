@@ -1,10 +1,10 @@
-# 🎯 Ad Creative Fatigue Tracker
+# OVERVIEW
 
-An end-to-end data pipeline, BigQuery diagnostic SQL view, and multi-page Looker Studio decision system designed to identify and remediate ad creative fatigue across Meta Ads and Google Ads before campaign performance degrades.
+This repository contains Big Query code designed to identify and remediate ad creative fatigue across Ad Platform (i.e. Meta Ads and Google Ads) as the first step of a diagnostic framework to spot and remediate ad creative fatigue. 
 
-## 🗄️ Raw Input Data Schema
+## SCHEMA 
 
-To feed the BigQuery diagnostic view (`adplatform_creative_performance`), the raw underlying table (`raw_ad_metrics`) uses the following top-of-funnel schema:
+The required schema to understand ad creative fatigue 
 
 | Field Name | Data Type | Mode | Description | Example Value |
 | :--- | :--- | :--- | :--- | :--- |
@@ -16,26 +16,33 @@ To feed the BigQuery diagnostic view (`adplatform_creative_performance`), the ra
 | **clicks** | `INTEGER` | `NULLABLE` | Total daily link clicks generated. | `185` |
 | **cost** | `FLOAT` | `NULLABLE` | Total daily ad spend (account currency). | `124.50` |
 
-## 📌 Problem & Business Value
+## THE PROBLEM & BUSINESS VALUE
 
-### The Mechanics of Creative Fatigue
-Digital marketing campaigns on performance platforms like Meta Ads and Google Ads inevitably suffer from ad creative fatigue. As an audience is exposed to the same visual hook or message repeatedly:
-1. **Audience Saturation & CTR Decay:** Viewer responsiveness drops, causing the Click-Through Rate (CTR) to decline over time.
-2. **Algorithmic Penalties & Auction Pressure:** Modern ad platform auction engines rely on ad relevance scores. As engagement (CTR) drops, algorithms penalize the creative by increasing Cost Per Mille (CPM) to maintain platform yield.
-3. **Compounded Cost Spikes (CPC):** The combination of falling CTR and rising CPM creates an exponential spike in Cost Per Click (CPC) (CPC ≈ CPM / (CTR * 10)), resulting in wasted ad spend and diminished ROAS.
+### THE MECHANICS OF CREATIVE FATIGUE
+Digital marketing campaigns on performance platforms like Meta Ads and Google Ads inevitably suffer from ad creative fatigue. As target audiences are repeatedly exposed to the same visual hook or message, a predictable decay chain occurs:
+1. **Audience Saturation & CTR Decay:** Viewer responsiveness drops, causing the Click-Through Rate (CTR) to decline over time
+2. **Algorithmic Penalties & Auction Pressure:** Modern auction engines rely heavily on ad relevance scores. As engagement (CTR) drops, algorithms penalize the creative by increasing Cost Per Mille (CPM) to protect platform yield
+3. **Compounded Cost Spikes (CPC):** The combination of falling CTR and rising CPM creates an exponential spike in Cost Per Click (CPC ≈ CPM / (CTR * 10)), resulting in wasted ad spend and rapidly diminishing ROAS
 
-### Solving the Baseline vs. Decay Dilemma
-A common challenge in performance marketing is distinguishing between a **weak initial ad** (e.g., an ad launching with a low baseline CTR of 0.50% that remains flat) and **true creative fatigue** (an ad whose CTR actively decays relative to its prior performance). 
+### THE AUTOMATED DIAGNOSTIC SOLUTION 
+Rather than relying on static global benchmarks, this pipeline acts as the **first step of an automated diagnostic framework** by evaluating **relative rate of decay**. By pairing rolling 3-day moving averages with 7-day period-over-period (L7D vs. P7D) trends, the system isolates true fatigue from market noise:
+* **Stable Low Performers:** An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active fatigue)
+* **Active Fatigue Drops:** An ad dropping from 2.5% to 1.2% CTR with a rising CPC triggers an immediate `Fatigue: Refresh Creative` alert—giving media buyers an actionable task list to swap assets *before* overall campaign ROAS collapses
 
-Evaluating raw CTR alone is misleading:
-* **CTR is the Cause (Audience Perception):** Indicates whether the visual/hook is losing resonance over time.
-* **CPC is the Effect (Financial Efficiency):** Measures the financial impact of changing auction costs and engagement rates.
+### SOLVING THE BASELINE V FORMAT & DECAY DILEMA
+A primary challenge in performance marketing is distinguishing between format-level baseline differences (e.g., a video ad launching with a normal 0.20% link CTR vs. a static image at 1.50%) and **true creative fatigue** (an ad whose performance actively decays relative to its prior baseline). 
 
-By pairing rolling 3-day moving averages with period-over-period (Last 7 Days vs. Prior 7 Days) relative percentage changes, this pipeline evaluates **rate of decay** rather than static global benchmarks. An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (since performance is stable), while an ad dropping from 2.5% to 1.2% with a rising CPC is flagged as `Fatigue: Refresh Creative`.
+Evaluating raw CTR alone leads to premature pausing of high-converting video assets:
+* **CTR is the Cause (Audience Perception):** Serves as the first-line diagnostic indicator of whether a visual hook or angle is losing resonance relative to its own baseline trajectory
+* **CPC is the Effect (Financial Efficiency):** Quantifies the real financial impact of auction pressure and declining engagement
+
+By pairing rolling 3-day moving averages with 7-day period-over-period (L7D vs. P7D) relative percentage changes, this pipeline evaluates **relative rate of decay** rather than static global targets:
+* **Format Baseline Stability:** A video ad holding a flat 0.20% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active decay)
+* **Active Fatigue Drops:** An ad whose CTR drops from 0.20% to 0.14% (<= -10%) while CPC rises (>= +10%) triggers an immediate `Fatigue: Refresh Creative` alert
 
 ---
 
-## ⏱️ Smoothing vs. Trend Windows: 3-Day Moving Averages vs. 7-Day Period-over-Period
+## SMOOTHING V TREND WINDOWS: 3-DAY MOVING AVERAGE V 7-DAY PERRIOD-OVER-PERIOD 
 
 A core engineering decision in this pipeline is the combination of **3-day moving averages** and **7-day period-over-period (L7D vs. P7D)** comparisons. Each window serves a distinct analytical purpose, and using them together eliminates false positives caused by day-of-week seasonality or single-day delivery glitches.
 
@@ -44,7 +51,7 @@ A core engineering decision in this pipeline is the combination of **3-day movin
 
 ---
 
-## 🧠 Diagnostic Matrix & Framework
+## DIANOSTIC MATRIX FRAMEWORK
 
 The diagnostic engine evaluates campaign metrics by tracking daily trends smoothed with a 3-day moving average and comparing performance over the **Last 7 Days (L7D)** relative to the **Prior 7 Days (P7D)**:
 
