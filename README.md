@@ -47,8 +47,8 @@ Digital marketing campaigns on performance platforms like Meta Ads and Google Ad
 
 ### The Automated Diagnostic Solution
 Rather than relying on static global benchmarks, this pipeline acts as the **first step of an automated diagnostic framework** by evaluating **relative rate of decay**. By pairing rolling 3-day moving averages with 7-day period-over-period (L7D vs. P7D) trends, the system isolates true fatigue from market noise:
-* **Stable Low Performers:** An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active fatigue)[cite: 1].
-* **Active Fatigue Drops:** An ad dropping from 2.5% to 1.2% CTR with a rising CPC triggers an immediate `Fatigue: Refresh Creative` alert—giving media buyers an actionable task list to swap assets *before* overall campaign ROAS collapses[cite: 1].
+* **Stable Low Performers:** An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active fatigue)
+* **Active Fatigue Drops:** An ad dropping from 2.5% to 1.2% CTR with a rising CPC triggers an immediate `Fatigue: Refresh Creative` alert—giving media buyers an actionable task list to swap assets *before* overall campaign ROAS collapses
 
 ### Solving the Baseline v Format & Decay Dilemma
 A primary challenge in performance marketing is distinguishing between format-level baseline differences (e.g., a video ad launching with a normal 0.20% link CTR vs. a static image at 1.50%) and **true creative fatigue** (an ad whose performance actively decays relative to its prior baseline).
