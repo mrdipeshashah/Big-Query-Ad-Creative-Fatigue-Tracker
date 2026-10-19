@@ -50,7 +50,7 @@ Rather than relying on static global benchmarks, this pipeline acts as the **fir
 * **Stable Low Performers:** An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active fatigue)[cite: 1].
 * **Active Fatigue Drops:** An ad dropping from 2.5% to 1.2% CTR with a rising CPC triggers an immediate `Fatigue: Refresh Creative` alert—giving media buyers an actionable task list to swap assets *before* overall campaign ROAS collapses[cite: 1].
 
-### Solving the Baseline vs. Format & Decay Dilemma
+### Solving the Baseline v Format & Decay Dilemma
 A primary challenge in performance marketing is distinguishing between format-level baseline differences (e.g., a video ad launching with a normal 0.20% link CTR vs. a static image at 1.50%) and **true creative fatigue** (an ad whose performance actively decays relative to its prior baseline).
 
 Evaluating raw CTR alone leads to premature pausing of high-converting video assets:
@@ -62,7 +62,7 @@ To address this, the pipeline incorporates **automated format classification dir
 * **Format Baseline Stability:** A video ad holding a flat 0.20% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active decay)[cite: 1].
 * **Active Fatigue Drops:** An ad whose CTR drops from 0.20% to 0.14% ($\le -10\%$) while CPC rises ($\ge +10\%$) triggers an immediate `Fatigue: Refresh Creative` alert[cite: 1].
 
-## SMOOTHING V TREND WINDOWS: 3-DAY MOVING AVERAGE V 7-DAY PERRIOD-OVER-PERIOD 
+## SMOOTHING v TREND WINDOWS: 3-DAY MOVING AVERAGE v 7-DAY PERRIOD-OVER-PERIOD 
 
 A core engineering decision in this pipeline is the combination of **3-day moving averages** and **7-day period-over-period (L7D vs. P7D)** comparisons. Each window serves a distinct analytical purpose, and using them together eliminates false positives caused by day-of-week seasonality or single-day delivery glitches.
 
