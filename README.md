@@ -62,16 +62,12 @@ To address this, the pipeline incorporates **automated format classification dir
 * **Format Baseline Stability:** A video ad holding a flat 0.20% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active decay)[cite: 1].
 * **Active Fatigue Drops:** An ad whose CTR drops from 0.20% to 0.14% ($\le -10\%$) while CPC rises ($\ge +10\%$) triggers an immediate `Fatigue: Refresh Creative` alert[cite: 1].
 
----
-
 ## SMOOTHING V TREND WINDOWS: 3-DAY MOVING AVERAGE V 7-DAY PERRIOD-OVER-PERIOD 
 
 A core engineering decision in this pipeline is the combination of **3-day moving averages** and **7-day period-over-period (L7D vs. P7D)** comparisons. Each window serves a distinct analytical purpose, and using them together eliminates false positives caused by day-of-week seasonality or single-day delivery glitches.
 
 **Data Processing Flow:**
 `Raw Daily Data (High Volatility)` ➔ `3-Day Moving Average (Noise Filtering)` ➔ `7-Day Comparison (Directional Trajectory)`
-
----
 
 ## FORMAT DIANOSTIC MATRIX FRAMEWORK
 
@@ -86,42 +82,6 @@ The diagnostic engine evaluates campaign metrics by tracking daily trends smooth
 | **All Formats** | **$\le -10\%$** | **$\le -10\%$** | `Low Demand: Scale Spend Down` | Market contraction. Scale back budget. |
 | **All Formats** | **$\ge +10\%$** | **$\ge +10\%$** | `High Demand: Leave Active` | Winning creative in active auction. Keep running. |
 | **All Formats** | Within $\pm 10\%$ | Within $\pm 10\%$ | `Healthy / Keep Running` | Baseline performance. No action required. |
-
-## 📊 Dashboard Architecture & Performance Measurement
-
-The Looker Studio dashboard is structured into two complementary operational pages:
-
-```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│               PAGE 1: EXECUTIVE ALERT & CREATIVE FATIGUE ACTION SYSTEM                  │
-│  • High-Level Health Scorecards (Total Spend, Impressions, Clicks, Avg CTR, Fatigued)  │
-│  • Operational Action Table (Sorted by CPC Spike Descending w/ Conditional Highlights)  │
-│  • 30-Day Trajectory Line Chart (3-Day Moving Average Crossover: CTR vs CPC)           │
-│  • Diagnostic Quadrant Scatter Plot (L7D CTR Change % vs L7D CPC Change %)             │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │ Drill-down via filter / cross-navigation
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                   PAGE 2: CREATIVE VOLUME & AUCTION PRESSURE DIAGNOSTICS                │
-│  • Diagnostic Scorecards (Total Spend, Total Impressions, Average Weighted CPM)        │
-│  • Delivery Volume vs. CTR Combo Chart (Daily Impressions Bars + CTR Trajectory Line)  │
-│  • Auction Pressure Trend (Dual-Axis CPM vs. CPC Line Chart)                           │
-│  • Forensic Daily Breakdown Table (Granular Day-by-Day Heatmap Table)                  │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 1. Page 1: Executive Alert & Creative Performance (Core Engine)
-Page 1 serves as the primary decision engine for media buyers and marketing leads. Positioned directly below the top scorecards, the **Operational Action Table** functions as a daily prioritized task list:
-* **Immediate Priority Ranking:** The action table is sorted by `CPC L7D Change` descending, bringing assets with the largest cost explosions (+70% to +85% CPC spikes) straight to rows 1–4.
-* **Conditional Visual Warnings:** Rows categorized as `Fatigue: Refresh Creative` are highlighted in red fill, while `Crowded Auction` scenarios are highlighted in yellow.
-* **Cross-Filtering Workflow:** Selecting a flagged asset in the top action table instantly filters the 30-day trajectory chart and diagnostic scatter matrix below, allowing media buyers to pinpoint exact CTR/CPC crossover decay dates.
-
-### 2. Page 2: Creative Volume & Auction Diagnostics (Forensic View)
-Page 2 provides forensic diagnostic depth to separate true creative fatigue from statistical noise or external market dynamics:
-* **Volume Validation (Delivery vs. CTR Combo Chart):** Overlays daily impression bars against smoothed CTR lines to prove whether CTR drops occurred under high impression volume (True Fatigue) or micro-volume budget cuts (Statistical Noise).
-* **Algorithmic Penalty vs. Competition (CPM vs. CPC Trend):** Tracks weighted CPM ($\frac{\text{cost}}{\text{impressions}} \times 1000$) alongside CPC trends to determine if cost spikes stem from platform relevance score penalties (CPM surge + CTR drop) or broader competitive bidding wars.
-* **Forensic Breakdown Table:** Displays raw daily figures with heatmaps across spend, impressions, clicks, aggregate CPM, CPC, and CTR.
-
 
 ## CALCULATED FIELDS 
 
