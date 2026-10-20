@@ -23,6 +23,53 @@ This repository provides two alternative SQL view architectures to suit differen
 | **Text / Multi-Asset** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -5\%$ CTR Drop / $\ge +15\%$ CPC *(Auction Pressure Focus)* |
 | **Primary Use Case** | Unstructured creative naming | Standardized naming taxonomies (`meta_vid_...`, `goog_txt_...`) |
 
+### CONCRETE CALCULATION & WALKTHROUGH EXAMMPLE
+
+To see how the BigQuery diagnostic engine evaluates an asset step-by-step, consider an ad creative with the following baseline and recent performance profile:
+
+#### Ingested Data Metrics
+* **Baseline Window (Prior 7 Days / P7D):**
+  * Baseline CTR (`ctr_p7d`): `2.00%` (0.0200)
+  * Baseline CPC (`cpc_p7d`): `$1.00`
+* **Evaluation Window (Last 7 Days / L7D):**
+  * L7D Impression Volume (`impressions_l7d`): `2,500`
+  * L7D CTR (`ctr_l7d`): `1.60%` (0.0160)
+  * L7D CPC (`cpc_l7d`): `$1.20`
+
+#### Execution Sequence
+
+##### Step 1: Statistical Significance Guardrail
+The SQL `CASE` statement first evaluates Rule #0:
+$$\text{L7D Impressions} = 2,500 \ge 1,000$$
+* **Verdict:** Passes the statistical significance guardrail ($2,500 \ge 1,000$). The ad is not flagged as `Low Volume (<1k Imps)` and proceeds to decay evaluation[cite: 1].
+
+##### Step 2: Period-over-Period Relative Shift Calculations
+The engine uses `SAFE_DIVIDE` to calculate normalized percentage shifts between windows[cite: 1]:
+
+* **Relative CTR Change (`ctr_7d_change_pct`):**
+  $$\frac{\text{CTR}_{L7D} - \text{CTR}_{P7D}}{\text{CTR}_{P7D}} = \frac{1.60\% - 2.00\%}{2.00\%} = \frac{-0.40\%}{2.00\%} = \mathbf{-20.0\%} \quad \text{(Relative CTR Decay)}[cite: 1]$$
+
+* **Relative CPC Change (`cpc_7d_change_pct`):**
+  $$\frac{\text{CPC}_{L7D} - \text{CPC}_{P7D}}{\text{CPC}_{P7D}} = \frac{\$1.20 - \$1.00}{\$1.00} = \frac{+\$0.20}{\$1.00} = \mathbf{+20.0\%} \quad \text{(Relative Cost Inflation)}[cite: 1]$$
+
+##### Step 3: Format-Specific Diagnostic Evaluation
+
+* **Case A: Evaluated as `VIDEO`**
+  * **Rule Trigger:** Requires CTR Drop $\le -15\%$ AND CPC Spike $\ge +10\%$[cite: 1].
+  * **Evaluation:**
+    * $\text{CTR Shift } (-20.0\%) \le -15\%$ $\rightarrow$ **PASS**[cite: 1]
+    * $\text{CPC Shift } (+20.0\%) \ge +10\%$ $\rightarrow$ **PASS**[cite: 1]
+  * **Automated Status:** **`Fatigue: Refresh Creative`**[cite: 1]
+
+* **Case B: Evaluated as `STATIC` or `CAROUSEL`**
+  * **Rule Trigger:** Requires CTR Drop $\le -10\%$ AND CPC Spike $\ge +10\%$[cite: 1].
+  * **Evaluation:** Both conditions met easily ($-20.0\%$ drop exceeds the $-10\%$ threshold)[cite: 1].
+  * **Automated Status:** **`Fatigue: Refresh Creative`**[cite: 1]
+
+* **Case C: Sensitivity Comparison (What if CTR only dropped to 1.80% / -10% drop?)**
+  * **If `STATIC`:** Triggered! ($-10.0\%$ drop meets static threshold)[cite: 1].
+  * **If `VIDEO`:** **Ignored!** (Video rule suppresses alert to account for link-click volatility; status defaults to `Healthy / Keep Running`)[cite: 1].
+
 ## SCHEMA 
 
 The required schema to understand ad creative fatigue 
