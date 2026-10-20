@@ -40,7 +40,7 @@ The required schema to understand ad creative fatigue
 ## THE PROBLEM & BUSINESS VALUE
 
 ### The Mechanics of Creative Fatigue
-Digital marketing campaigns on performance platforms like Meta Ads and Google Ads inevitably suffer from ad creative fatigue. As target audiences are repeatedly exposed to the same visual hook or message, a predictable decay chain occurs:
+Campaigns on platforms like Meta Ads and Google Ads inevitably suffer from ad creative fatigue. As target audiences are repeatedly exposed to the same visual hook or message, a predictable decay chain occurs:
 1. **Audience Saturation & CTR Decay:** Viewer responsiveness drops, causing the Click-Through Rate (CTR) to decline over time.
 2. **Algorithmic Penalties & Auction Pressure:** Modern auction engines rely heavily on ad relevance scores. As engagement (CTR) drops, algorithms penalize the creative by increasing Cost Per Mille (CPM) to protect platform yield.
 3. **Compounded Cost Spikes (CPC):** The combination of falling CTR and rising CPM creates an exponential spike in Cost Per Click ($\text{CPC} \approx \frac{\text{CPM}}{\text{CTR} \times 10}$), resulting in wasted ad spend and rapidly diminishing ROAS.
