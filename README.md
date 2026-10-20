@@ -46,7 +46,7 @@ Digital marketing campaigns on performance platforms like Meta Ads and Google Ad
 3. **Compounded Cost Spikes (CPC):** The combination of falling CTR and rising CPM creates an exponential spike in Cost Per Click ($\text{CPC} \approx \frac{\text{CPM}}{\text{CTR} \times 10}$), resulting in wasted ad spend and rapidly diminishing ROAS.
 
 ### The Automated Diagnostic Solution
-Rather than relying on static global benchmarks, this pipeline acts as the **first step of an automated diagnostic framework** by evaluating **relative rate of decay**. By pairing rolling 3-day moving averages with 7-day period-over-period (L7D vs. P7D) trends, the system isolates true fatigue from market noise:
+This pipeline acts as the **first step of an automated diagnostic framework** by evaluating **relative rate of decay**. By pairing rolling 3-day moving averages with 7-day period-over-period (L7D vs. P7D) trends, the system isolates true fatigue from market noise:
 * **Stable Low Performers:** An ad with a flat 0.50% CTR is classified as `Healthy / Keep Running` (stable efficiency, no active fatigue)
 * **Active Fatigue Drops:** An ad dropping from 2.5% to 1.2% CTR with a rising CPC triggers an immediate `Fatigue: Refresh Creative` alert—giving media buyers an actionable task list to swap assets *before* overall campaign ROAS collapses
 
