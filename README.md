@@ -23,6 +23,55 @@ This repository provides two alternative SQL view architectures to suit differen
 | **Text / Multi-Asset** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -5\%$ CTR Drop / $\ge +15\%$ CPC *(Auction Pressure Focus)* |
 | **Primary Use Case** | Unstructured creative naming | Standardized naming taxonomies (`meta_vid_...`, `goog_txt_...`) |
 
+### DIAGNOSTIC MODEL & WALKTHROUGH EXAMMPLE
+
+Evaluating every creative through a **three-stage logical reasoning process**.
+
+#### Stage 1: "Is this ad mature enough to judge?" (Volume Guardrail)
+* **The Logic:** A brand-new ad that ran for two days might show a sudden drop in CTR or a spike in CPC simply because only 50 people saw it. Judging an ad on small sample sizes leads to premature, wasteful creative swaps.
+* **The Engine's Decision:** Before checking any performance drops, the engine counts the ad's recent exposure. If it has logged fewer than 1,000 impressions in the last 7 days, the engine immediately labels it **`Low Volume (<1k Imps)`** and stops—protecting learning-phase ads from false-positive fatigue alerts[cite: 1].
+
+---
+
+#### Stage 2: "Is performance degrading relative to its own baseline?" (Normalized % Shifts)
+* **The Logic:** Every ad format and audience target has a different baseline. A Search text ad might naturally average a 4.0% CTR, whereas a Meta Video ad might naturally average 0.4% CTR. Using fixed benchmarks (e.g., "alert if CTR drops below 1.0%") fails because it compares apples to oranges.
+* **The Engine's Decision:** The model compares the ad's **Last 7 Days (L7D)** directly against its own **Prior 7 Days (P7D)** baseline[cite: 1]. It asks: *"Compared to how this exact ad performed last week, by what percentage has its engagement dropped and its cost inflated?"*[cite: 1]
+
+---
+
+#### Stage 3: "Does this decay match how this specific format behaves?" (Format Rules)
+* **The Logic:** Different ad formats suffer from different types of audience friction:
+  * **Video Ads:** Users watch video for entertainment; link click-through rates naturally bounce around day-to-day. A small 10% drop in CTR is normal platform noise[cite: 1].
+  * **Static Banner Ads:** Static images are purely direct-response. If users stop clicking a static image, it means they've seen it too many times and are actively scrolling past it[cite: 1].
+  * **Text / Performance Max Ads:** Text search ads rarely suffer visual fatigue, but they get hit by cost explosions when competitors outbid them in auctions[cite: 1].
+
+* **The Engine's Decision:**
+  * **For Video:** It requires a steep drop in CTR ($\ge 15\%$) **and** an increase in CPC ($\ge 10\%$) before flagging fatigue—filtering out normal video engagement noise[cite: 1].
+  * **For Static / Carousel:** It applies a tighter tolerance ($\ge 10\%$ drop in CTR **and** $\ge 10\%$ CPC spike) because static decay happens faster and requires quicker visual refreshes[cite: 1].
+  * **For Text / PMax:** It primary monitors for sudden auction cost explosions ($\ge 15\%$ CPC spike)[cite: 1].
+
+---
+
+### Real-World Example: Seeing the Logic in Action
+
+Imagine two ads running in the same campaign:
+
+1. **Ad A (New Prospecting Video):**
+   * *Last Week:* 0.50% CTR | $2.00 CPC
+   * *This Week:* 0.45% CTR (10% drop) | $2.20 CPC (10% spike)
+   * **Model Reasoning:** "The cost went up, but a 10% drop in video CTR is normal viewing fluctuation. Don't waste time making a new video yet."
+   * **Status:** `Healthy / Keep Running`[cite: 1]
+
+2. **Ad B (Static Discount Banner):**
+   * *Last Week:* 2.00% CTR | $1.00 CPC
+   * *This Week:* 1.60% CTR (20% drop) | $1.20 CPC (20% spike)
+   * **Model Reasoning:** "This static ad lost a fifth of its clickability and got 20% more expensive in just one week. The audience is blind to this image."
+   * **Status:** **`Fatigue: Refresh Creative`**[cite: 1]
+
+
+
+...................
+
 ### CONCRETE CALCULATION & WALKTHROUGH EXAMMPLE
 
 To see how the BigQuery diagnostic engine evaluates an asset step-by-step, consider an ad creative with the following baseline and recent performance profile:
