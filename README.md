@@ -6,14 +6,28 @@ This repository contains Big Query code designed to identify and remediate ad cr
 
 The data studio dashboard (https://datastudio.google.com/reporting/0783b9bf-5507-470e-a847-aeabfbf4b560) brings many of the insights to life.
 
-## DIAGNOSTIC MODEL EVOLUTION
+## SCHEMA 
+
+The required schema to understand ad creative fatigue 
+
+| Field Name | Data Type | Mode | Description | Example Value |
+| :--- | :--- | :--- | :--- | :--- |
+| **date** | `DATE` | `NULLABLE` | Performance record date (`YYYY-MM-DD`). | `2026-10-12` |
+| **platform** | `STRING` | `NULLABLE` | Ad platform identifier (`meta`, `google`). | `meta` |
+| **campaign_name** | `STRING` | `NULLABLE` | Campaign name string. | `Prospecting_Conversions_UK` |
+| **creative_name** | `STRING` | `NULLABLE` | Human-readable creative name or concept code. | `Static_Hook01_AngleA` |
+| **impressions** | `INTEGER` | `NULLABLE` | Total daily ad impressions delivered. | `14500` |
+| **clicks** | `INTEGER` | `NULLABLE` | Total daily link clicks generated. | `185` |
+| **cost** | `FLOAT` | `NULLABLE` | Total daily ad spend (account currency). | `124.50` |
+
+## MODEL EVOLUTION
 
 This repository provides two alternative SQL view architectures to suit different media buying workflows and governance standards:
 
 1. **Format-Tiered Model (`1.0_creative-performance-format-tiered-model.sql`):** The primary production engine. Dynamically classifies creative formats from naming conventions and applies format-aware sensitivity thresholds to eliminate false-positive fatigue alerts across video and search formats.
 2. **Generic Model (`2.0_creative-performance-generic-model.sql`):** The baseline architecture. Operates on a single cross-format relative threshold ($\pm 10\%$), ideal for accounts without structured creative naming conventions.
 
-### Architectural Comparison Matrix
+### COMPARSION MATRIX
 
 | Evaluation Dimension | Generic Model (`2.0`) | Format-Tiered Model (`1.0`) |
 | :--- | :--- | :--- |
@@ -23,7 +37,7 @@ This repository provides two alternative SQL view architectures to suit differen
 | **Text / Multi-Asset** | $\le -10\%$ CTR Drop / $\ge +10\%$ CPC | $\le -5\%$ CTR Drop / $\ge +15\%$ CPC *(Auction Pressure Focus)* |
 | **Primary Use Case** | Unstructured creative naming | Standardized naming taxonomies (`meta_vid_...`, `goog_txt_...`) |
 
-### DIAGNOSTIC MODEL & WALKTHROUGH EXAMMPLE
+## WALKTHROUGH EXAMMPLE
 
 Evaluating every creative through a **three-stage process**.
 
@@ -68,71 +82,6 @@ Imagine two ads running in the same campaign:
    * **Model Reasoning:** "This static ad lost a fifth of its clickability and got 20% more expensive in just one week. The audience is blind to this image."
    * **Status:** **`Fatigue: Refresh Creative`**[cite: 1]
 
-
-
-...................
-
-### CONCRETE CALCULATION & WALKTHROUGH EXAMMPLE
-
-To see how the BigQuery diagnostic engine evaluates an asset step-by-step, consider an ad creative with the following baseline and recent performance profile:
-
-#### Ingested Data Metrics
-* **Baseline Window (Prior 7 Days / P7D):**
-  * Baseline CTR (`ctr_p7d`): `2.00%` (0.0200)
-  * Baseline CPC (`cpc_p7d`): `$1.00`
-* **Evaluation Window (Last 7 Days / L7D):**
-  * L7D Impression Volume (`impressions_l7d`): `2,500`
-  * L7D CTR (`ctr_l7d`): `1.60%` (0.0160)
-  * L7D CPC (`cpc_l7d`): `$1.20`
-
-#### Execution Sequence
-
-##### Step 1: Statistical Significance Guardrail
-The SQL `CASE` statement first evaluates Rule #0:
-$$\text{L7D Impressions} = 2,500 \ge 1,000$$
-* **Verdict:** Passes the statistical significance guardrail ($2,500 \ge 1,000$). The ad is not flagged as `Low Volume (<1k Imps)` and proceeds to decay evaluation.
-
-##### Step 2: Period-over-Period Relative Shift Calculations
-The engine uses `SAFE_DIVIDE` to calculate normalized percentage shifts between windows:
-
-* **Relative CTR Change (`ctr_7d_change_pct`):**
-  $$\frac{\text{CTR}_{L7D} - \text{CTR}_{P7D}}{\text{CTR}_{P7D}} = \frac{1.60\% - 2.00\%}{2.00\%} = \frac{-0.40\%}{2.00\%} = \mathbf{-20.0\%} \quad \text{(Relative CTR Decay)}$$
-
-* **Relative CPC Change (`cpc_7d_change_pct`):**
-  $$\frac{\text{CPC}_{L7D} - \text{CPC}_{P7D}}{\text{CPC}_{P7D}} = \frac{\$1.20 - \$1.00}{\$1.00} = \frac{+\$0.20}{\$1.00} = \mathbf{+20.0\%} \quad \text{(Relative Cost Inflation)}$$
-
-##### Step 3: Format-Specific Diagnostic Evaluation
-
-* **Case A: Evaluated as `VIDEO`**
-  * **Rule Trigger:** Requires CTR Drop $\le -15\%$ AND CPC Spike $\ge +10\%$.
-  * **Evaluation:**
-    * $\text{CTR Shift } (-20.0\%) \le -15\%$ $\rightarrow$ **PASS**
-    * $\text{CPC Shift } (+20.0\%) \ge +10\%$ $\rightarrow$ **PASS**
-  * **Automated Status:** **`Fatigue: Refresh Creative`**
-
-* **Case B: Evaluated as `STATIC` or `CAROUSEL`**
-  * **Rule Trigger:** Requires CTR Drop $\le -10\%$ AND CPC Spike $\ge +10\%$
-  * **Evaluation:** Both conditions met easily ($-20.0\%$ drop exceeds the $-10\%$ threshold)
-  * **Automated Status:** **`Fatigue: Refresh Creative`**
-
-* **Case C: Sensitivity Comparison (What if CTR only dropped to 1.80% / -10% drop?)**
-  * **If `STATIC`:** Triggered! ($-10.0\%$ drop meets static threshold)
-  * **If `VIDEO`:** **Ignored!** (Video rule suppresses alert to account for link-click volatility; status defaults to `Healthy / Keep Running`)
-
-## SCHEMA 
-
-The required schema to understand ad creative fatigue 
-
-| Field Name | Data Type | Mode | Description | Example Value |
-| :--- | :--- | :--- | :--- | :--- |
-| **date** | `DATE` | `NULLABLE` | Performance record date (`YYYY-MM-DD`). | `2026-10-12` |
-| **platform** | `STRING` | `NULLABLE` | Ad platform identifier (`meta`, `google`). | `meta` |
-| **campaign_name** | `STRING` | `NULLABLE` | Campaign name string. | `Prospecting_Conversions_UK` |
-| **creative_name** | `STRING` | `NULLABLE` | Human-readable creative name or concept code. | `Static_Hook01_AngleA` |
-| **impressions** | `INTEGER` | `NULLABLE` | Total daily ad impressions delivered. | `14500` |
-| **clicks** | `INTEGER` | `NULLABLE` | Total daily link clicks generated. | `185` |
-| **cost** | `FLOAT` | `NULLABLE` | Total daily ad spend (account currency). | `124.50` |
-
 ## THE PROBLEM & BUSINESS VALUE
 
 ### The Mechanics of Creative Fatigue
@@ -165,7 +114,7 @@ A core engineering decision in this pipeline is the combination of **3-day movin
 **Data Processing Flow:**
 `Raw Daily Data (High Volatility)` ➔ `3-Day Moving Average (Noise Filtering)` ➔ `7-Day Comparison (Directional Trajectory)`
 
-## FORMAT DIANOSTIC MATRIX FRAMEWORK
+## FORMAT MATRIX FRAMEWORK
 
 The diagnostic engine evaluates campaign metrics by tracking daily trends smoothed with a 3-day moving average and comparing performance over the **Last 7 Days (L7D)** relative to the **Prior 7 Days (P7D)**. To prevent false positives across varied ad types, the engine applies format-aware sensitivity thresholds across each format category (`VIDEO`, `STATIC`, `CAROUSEL`, `TEXT`, `MULTI_ASSET`):
 
