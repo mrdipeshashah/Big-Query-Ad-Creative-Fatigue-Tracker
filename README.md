@@ -25,7 +25,7 @@ This repository provides two alternative SQL view architectures to suit differen
 
 ### DIAGNOSTIC MODEL & WALKTHROUGH EXAMMPLE
 
-Evaluating every creative through a **three-stage logical reasoning process**.
+Evaluating every creative through a **three-stage process**.
 
 #### Stage 1: "Is this ad mature enough to judge?" (Volume Guardrail)
 * **The Logic:** A brand-new ad that ran for two days might show a sudden drop in CTR or a spike in CPC simply because only 50 people saw it. Judging an ad on small sample sizes leads to premature, wasteful creative swaps.
