@@ -45,13 +45,9 @@ Evaluating every creative through a **three-stage process**.
 * **The Logic:** A brand-new ad that ran for two days might show a sudden drop in CTR or a spike in CPC simply because only 50 people saw it. Judging an ad on small sample sizes leads to premature, wasteful creative swaps.
 * **The Engine's Decision:** Before checking any performance drops, the engine counts the ad's recent exposure. If it has logged fewer than 1,000 impressions in the last 7 days, the engine immediately labels it **`Low Volume (<1k Imps)`** and stops—protecting learning-phase ads from false-positive fatigue alerts[cite: 1].
 
----
-
 #### Stage 2: "Is performance degrading relative to its own baseline?" (Normalized % Shifts)
 * **The Logic:** Every ad format and audience target has a different baseline. A Search text ad might naturally average a 4.0% CTR, whereas a Meta Video ad might naturally average 0.4% CTR. Using fixed benchmarks (e.g., "alert if CTR drops below 1.0%") fails because it compares apples to oranges.
 * **The Engine's Decision:** The model compares the ad's **Last 7 Days (L7D)** directly against its own **Prior 7 Days (P7D)** baseline[cite: 1]. It asks: *"Compared to how this exact ad performed last week, by what percentage has its engagement dropped and its cost inflated?"*[cite: 1]
-
----
 
 #### Stage 3: "Does this decay match how this specific format behaves?" (Format Rules)
 * **The Logic:** Different ad formats suffer from different types of audience friction:
@@ -63,8 +59,6 @@ Evaluating every creative through a **three-stage process**.
   * **For Video:** It requires a steep drop in CTR ($\ge 15\%$) **and** an increase in CPC ($\ge 10\%$) before flagging fatigue—filtering out normal video engagement noise[cite: 1].
   * **For Static / Carousel:** It applies a tighter tolerance ($\ge 10\%$ drop in CTR **and** $\ge 10\%$ CPC spike) because static decay happens faster and requires quicker visual refreshes[cite: 1].
   * **For Text / PMax:** It primary monitors for sudden auction cost explosions ($\ge 15\%$ CPC spike)[cite: 1].
-
----
 
 ### Real-World Example: Seeing the Logic in Action
 
